@@ -33,9 +33,15 @@ If available, prefer Trusted Publishing over long-lived API tokens for PyPI.
 
 GitHub Actions:
 
-- pushes of tags matching `payload-server-v*` trigger `.github/workflows/publish-pypi.yml`
+- bump `project.version` in `pyproject.toml`
+- commit and push that change
+- create and push a matching release tag such as `v0.1.0`
+- pushes of tags matching `v*` trigger `.github/workflows/publish-pypi.yml`
+- old `payload-server-v*` tags are obsolete and are not part of the release process anymore
 - configure the PyPI project to trust this repository/workflow
-- the workflow builds, runs `twine check`, and publishes via Trusted Publishing
+- the workflow validates that the pushed tag version matches `pyproject.toml`
+- `workflow_dispatch` is preflight-only: it builds and checks distributions but does not publish
+- the workflow builds, runs `twine check`, and publishes via Trusted Publishing only for tag pushes
 
 ## Post-release Checks
 
