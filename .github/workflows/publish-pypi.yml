@@ -1,0 +1,46 @@
+name: Publish PyPI
+
+on:
+  push:
+    tags:
+      - "payload-server-v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+      - name: Test
+        run: |
+          python -m unittest discover -s tests -v
+          python -m compileall src tests
+      - name: Build distributions
+        run: python -m build
+      - name: Check distributions
+        run: python -m twine check dist/*
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
