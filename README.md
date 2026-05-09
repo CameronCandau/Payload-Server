@@ -17,10 +17,13 @@ By default it serves `~/tools/payloads`:
 ```text
 ~/tools/payloads/
 ├── linux/
+│   └── pspy64
 └── windows/
-    ├── bin/
-    ├── scripts/
-    └── webshells/
+    ├── Rubeus.exe
+    ├── RunasCs.exe
+    ├── nc.exe
+    ├── PowerView.ps1
+    └── Invoke-ConPtyShell.ps1
 ```
 
 ## Install
@@ -108,10 +111,10 @@ directory. The intended workflow is:
 2. Pull the approved mirror locally with `artifact-locker pull`
 3. Serve the synced directory with `payload-server`
 
-When the payload cache comes from `artifact-locker`, payload files may live
-under per-artifact UUID subdirectories. The built-in fuzzy server still lets
-short paths like `/bin/winpeas.exe` or `/scripts/PowerView.ps1` resolve to the
-matching nested file.
+Current `artifact-locker` builds keep the local payload tree flat
+(`/windows/winpeas.exe`, `/windows/PowerView.ps1`). The fuzzy
+server still understands older caches that used per-artifact UUID
+subdirectories, so short paths continue to work during migration.
 
 ## Tests
 
