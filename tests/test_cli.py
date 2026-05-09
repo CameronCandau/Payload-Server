@@ -83,6 +83,32 @@ class HelperTests(unittest.TestCase):
             self.assertEqual(matched, target / "winPEASx64.exe")
             self.assertEqual(corrected, "/bin/winPEASx64.exe")
 
+    def test_fuzzy_translate_matches_nested_artifact_locker_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "bin" / "0196bc2b-7e4a-7000-8d12-abcdefabcdef"
+            target.mkdir(parents=True)
+            nested_file = target / "winpeas.exe"
+            nested_file.write_text("x", encoding="utf-8")
+
+            matched, corrected = cli.fuzzy_translate(root, "/bin/winpeas.exe")
+
+            self.assertEqual(matched, nested_file)
+            self.assertEqual(corrected, "/bin/0196bc2b-7e4a-7000-8d12-abcdefabcdef/winpeas.exe")
+
+    def test_fuzzy_translate_matches_nested_linux_file_without_category_in_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "bin" / "0196bc2b-7e4a-7000-8d12-abcdefabcdef"
+            target.mkdir(parents=True)
+            nested_file = target / "linpeas.sh"
+            nested_file.write_text("x", encoding="utf-8")
+
+            matched, corrected = cli.fuzzy_translate(root, "/linpeas.sh")
+
+            self.assertEqual(matched, nested_file)
+            self.assertEqual(corrected, "/bin/0196bc2b-7e4a-7000-8d12-abcdefabcdef/linpeas.sh")
+
     def test_safe_join_rejects_escape(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir).resolve()

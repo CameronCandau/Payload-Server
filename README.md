@@ -4,10 +4,10 @@
 SMB and generating copyable transfer targets during pentest and red-team
 workflow.
 
-It is designed to pair cleanly with `locker sync` from `artifact-catalog`:
+It is designed to pair cleanly with `artifact-locker pull`:
 
 ```bash
-locker sync
+artifact-locker pull
 payload-server linux
 payload-server windows 8000 443
 ```
@@ -99,14 +99,19 @@ hard install requirements:
 If those tools are absent, the related feature fails with a direct error
 message while the rest of the CLI remains usable.
 
-## Relationship To artifact-catalog
+## Relationship To artifact-locker
 
 `payload-server` does not ship payloads. It serves a user-managed local
 directory. The intended workflow is:
 
-1. Curate and publish with `artifact-catalog`
-2. Sync the approved mirror locally with `locker sync`
+1. Curate and publish with `artifact-locker`
+2. Pull the approved mirror locally with `artifact-locker pull`
 3. Serve the synced directory with `payload-server`
+
+When the payload cache comes from `artifact-locker`, payload files may live
+under per-artifact UUID subdirectories. The built-in fuzzy server still lets
+short paths like `/bin/winpeas.exe` or `/scripts/PowerView.ps1` resolve to the
+matching nested file.
 
 ## Tests
 
